@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>canvas</title>
+  <style>body {
+    margin: 0;
+  }</style>
+</head>
+<body>
+<canvas id="canvas" width="600" height="900">
+ 当前浏览器版本不支持动画！
+</canvas>
+</body>
+</html>
+<script>
+  document.querySelector("#canvas").width = document.body.offsetWidth;
+  document.querySelector("#canvas").height = document.body.offsetHeight
+</script>
+<script src="entity.js" type="text/javascript"></script>
+<script src="start.js" type="text/javascript"></script>
+
