@@ -1,0 +1,67 @@
+- let getPageTitle = function() {
+-     let pageTitle = ''
+-     if (is_post()) pageTitle = page.title
+-     if (is_archive()) pageTitle = 'Archive'
+-     if (is_tag()) pageTitle = 'Tag: ' + page.tag
+-     if (is_category()) pageTitle = 'Category: ' + page.category
+-     if (is_month()) pageTitle += ': ' + page.month + '/' + page.year
+-     if (is_year()) pageTitle += ': ' + page.year
+-     pageTitle += ' [ ' + config.title + ' ] '
+-     return pageTitle
+- }
+
+doctype html
+html(lang=config.language)
+  head
+    meta(charset='UTF-8')
+    meta(name="viewport" content="width=device-width, initial-scale=1, user-scalable=0")
+    meta(name="description" content=getPageTitle())
+    //- customize chrome tab color
+    -
+      let colorMap = {
+        default: "#ebc65a",
+        forest: "#6ba8a9",
+        grass: "#9dab86",
+        sky: "#9be3de",
+        sun: "#ffa259",
+        sea: "#46b3e6"
+      }
+    meta(name="theme-color" content=colorMap[theme.main_color])
+    title=getPageTitle()
+    link(rel="shortcut icon" href= config.favicon || "/favicon.ico")
+
+    //- this stylesheet mush (download -> parse) before any scripts
+    link(rel="stylesheet" href="/css/index.css")
+
+    //- scripts list from _config.yml
+    if theme.scripts_defer && theme.scripts_defer.length > 0
+      each url in theme.scripts_defer
+        script(src=url defer)
+
+    include ./google-analytics-script
+    include ./comments-script
+    include ./toc-script
+
+    //- these stylesheet won't block the scripts's download
+    //- stylesheets list from _config.yml
+    if theme.stylesheets && theme.stylesheets.length > 0
+      each url in theme.stylesheets
+        link(rel='stylesheet' href=url)
+    if theme.stylesheets_preload && theme.stylesheets_preload.length > 0
+      each url in theme.stylesheets_preload
+        link(rel='preload' href=url as='style' onload="this.onload=null;this.rel='stylesheet'")
+        //- for which not support preload function
+        link(rel='stylesheet' href=url)
+
+  body
+    .mask-border
+    include ./head
+    .paper-container
+      block content
+    include ./footer
+    include ./darkmode-mask
+    .sidebar__button
+
+
+
+
