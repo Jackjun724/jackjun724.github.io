@@ -1,2 +1,2 @@
 # blog
-Hexo Blog
+Hexo Blog with travis
