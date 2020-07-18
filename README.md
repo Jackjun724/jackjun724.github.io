@@ -1,0 +1,2 @@
+# blog
+Hexo Blog
