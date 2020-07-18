@@ -9,6 +9,7 @@ menu:
 
 # stylesheets loaded in the <head>
 stylesheets:
+- /blog/css/index.css
 
 stylesheets_preload:
 - https://cdn.bootcss.com/highlight.js/9.6.0/styles/github.min.css # for highlight
@@ -17,7 +18,7 @@ stylesheets_preload:
 # scripts loaded in the end of the body
 scripts_defer:
 - https://cdn.bootcss.com/highlight.js/9.6.0/highlight.min.js # for highlight
-- /js/paper.js # for basic script
+- /blog/js/paper.js # for basic script
 
 
 social:
