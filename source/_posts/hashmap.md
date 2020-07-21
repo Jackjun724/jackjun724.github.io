@@ -1,5 +1,5 @@
 ---
-title: Java7/8 中的 HashMap 和 ConcurrentHashMap 全解析
+title: Java7/8中的HashMap和ConcurrentHashMap全解析
 tags: 数据结构
 ---
 
