@@ -1,6 +1,6 @@
 ---
 title: MySQL性能调优
-tags: MySQL
+tags: [MySQL,Performance]
 ---
 
 # Mysql执行流程
