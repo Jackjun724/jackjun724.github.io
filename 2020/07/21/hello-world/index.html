@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0"><meta name="description" content="MySQL性能调优 [ Stay Hungry, Stay Foolish ] "><meta name="theme-color" content="#ebc65a"><title>MySQL性能调优 [ Stay Hungry, Stay Foolish ] </title><link rel="shortcut icon" href="/favicon.ico"><link rel="stylesheet" href="/css/index.css"><script src="https://cdn.bootcss.com/highlight.js/9.6.0/highlight.min.js" defer></script><script src="/js/paper.js" defer></script><script src="https://www.googletagmanager.com/gtag/js?id=UA-173003606-1" async></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-173003606-1');</script><script src="https://www.unpkg.com/valine/dist/Valine.min.js" defer></script><script>window.addEventListener('DOMContentLoaded', () => {
+  new Valine({
+    el: '#comments',
+    appId: 'GyF9w7cCtdicxaKfHKJyjjC9-gzGzoHsz',
+    appKey: 'mquBGDELW6u70BiizXk1HGnH',
+    notify: true,
+    verify: true,
+    avatar: 'mp',
+    placeholder: '文明发言是交流的起点',
+  })
+})</script><link rel="stylesheet" href="/css/tocbot.css"><script src="/js/tocbot.js" defer></script><script>window.addEventListener('DOMContentLoaded', () => {
+  tocbot.init({
+    // Where to render the table of contents.
+    tocSelector: '.toc__content',
+    // Where to grab the headings to build the table of contents.
+    contentSelector: '.article__content',
+    // Which headings to grab inside of the contentSelector element.
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    // For headings inside relative or absolute positioned containers within content.
+    hasInnerContainers: true,
+    orderedList: false,
+    collapseDepth: 2,
+  });
+})</script><link rel="preload" href="https://cdn.bootcss.com/highlight.js/9.6.0/styles/github.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"><link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.6.0/styles/github.min.css"><link rel="preload" href="https://fonts.googleapis.com/css?family=Abril+Fatface&amp;display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface&amp;display=swap"><meta name="generator" content="Hexo 4.2.1"></head><body><div class="mask-border"></div><div class="head"><div class="head__inner"><h1><a href="/">Stay Hungry, Stay Foolish</a></h1><p>Development blog</p></div></div><div class="paper-container"><div class="main"><div class="location-bar"><div class="line-1"><div class="horizontal-line" style="height: 3px"></div></div><div class="line-2"><div class="horizontal-line" style="height: 1px"></div></div><p class="text">MySQL性能调优</p><div class="switch-button"><input class="container_toggle" type="checkbox" id="switch" name="mode"><label for="switch">Toggle</label></div><div class="line-3"><div class="horizontal-line" style="height: 1px"></div></div></div><div class="main__2-col"><article class="post-view__article"><div class="article__infomation"><div class="posts-item"><h2 class="posts-item__title"><a href="">MySQL性能调优</a></h2><span class="post__date">2020-07-21</span><a href="/tags/MySQL/"><span class="post__tags">#MySQL</span></a></div></div><div class="article__content"><h1 id="Mysql执行流程"><a href="#Mysql执行流程" class="headerlink" title="Mysql执行流程"></a>Mysql执行流程</h1><p><img src="https://static001.geekbang.org/resource/image/0d/d9/0d2070e8f84c4801adbfa03bda1f98d9.png" alt="avatar"></p>
+<h2 id="连接器"><a href="#连接器" class="headerlink" title="连接器"></a>连接器</h2><p>创建数据库连接，查询权限，8个小时没动作连接将被销毁(param:<code>wait_timeout</code>)，</p>
+<p>建立连接的过程通常是比较复杂的，所以建议在使用中要尽量减少建立连接的动作，也就是尽量使用长连接。</p>
+<p>但是全部使用长连接后，有些时候 MySQL 占用内存涨得特别快，这是因为 MySQL 在执行过程中临时使用的内存是管理在连接对象里面的。这些资源会在连接断开的时候才释放。所以如果长连接累积下来，可能导致内存占用太大，被系统强行杀掉（OOM），从现象看就是 MySQL 异常重启了。</p>
+<p>可以考虑以下两种解决方案：</p>
+<ol>
+<li>定期断开长连接。使用一段时间，或者程序里面判断执行过一个占用内存的大查询后，断开连接，之后要查询再重连。</li>
+<li>可以在每次执行一个比较大的操作后，通过执行<code>mysql_reset_connection</code>来重新初始化连接资源。这个过程不需要重连和重新做权限验证，但是会将连接恢复到刚刚创建完时的状态 <strong>(MySQL 5.7 或更新版本)</strong>。</li>
+</ol>
+<h2 id="查询缓存"><a href="#查询缓存" class="headerlink" title="查询缓存"></a>查询缓存</h2><p>在Mysql8.0版本已经被移除，低版本中仍然保留但部分版本默认关闭，查询缓存往往弊大于利，因为每次更新都会使查询缓存失效，而导致查询缓存一直在浪费资源却没有起到实际的作用，但是查询缓存拥有按需使用模式，通过设置<code>query_cache_type</code>为<code>DEMAND</code>来启用按需。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 启用缓存 8.0版本以下且需要开启缓存功能</span><br><span class="hljs-keyword">select</span> <span class="hljs-keyword">SQL_CACHE</span> * <span class="hljs-keyword">from</span> T <span class="hljs-keyword">where</span> <span class="hljs-keyword">ID</span>=<span class="hljs-number">10</span>；<br></code></pre></td></tr></table></figure>
+
+<h2 id="分析器"><a href="#分析器" class="headerlink" title="分析器"></a>分析器</h2><p>分析器主要用来判断 SQL语句 是否满足 MySQL的语法。<br>例如</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql">mysql&gt; elect * from t where ID=1;<br><br>ERROR 1064 (42000): You have an error in your SQL syntax; <span class="hljs-keyword">check</span> the <span class="hljs-keyword">manual</span> that corresponds <span class="hljs-keyword">to</span> your MySQL <span class="hljs-keyword">server</span> <span class="hljs-keyword">version</span> <span class="hljs-keyword">for</span> the <span class="hljs-keyword">right</span> syntax <span class="hljs-keyword">to</span> <span class="hljs-keyword">use</span> near <span class="hljs-string">'elect * from t where ID=1'</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
+<p>就是在分析期间抛出的错误。</p>
+<h2 id="优化器"><a href="#优化器" class="headerlink" title="优化器"></a>优化器</h2><p>优化器用来决定执行顺序，比如:</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> t1 <span class="hljs-keyword">join</span> t2 <span class="hljs-keyword">using</span>(<span class="hljs-keyword">ID</span>) <span class="hljs-keyword">where</span> t1.c=<span class="hljs-number">10</span> <span class="hljs-keyword">and</span> t2.d=<span class="hljs-number">20</span>;<br></code></pre></td></tr></table></figure>
+<p>既可以先从表 t1 里面取出 c=10 的记录的 ID 值，再根据 ID 值关联到表 t2，再判断 t2 里面 d 的值是否等于 20。</p>
+<p>也可以先从表 t2 里面取出 d=20 的记录的 ID 值，再根据 ID 值关联到 t1，再判断 t1 里面 c 的值是否等于 10。</p>
+<p>这两种执行方法的逻辑结果是一样的，但是执行的效率会有不同，而优化器的作用就是决定选择使用哪一个方案。</p>
+<h2 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h2><p>开始执行的时候，要先判断一下你对这个表 T 有没有执行查询的权限，如果没有，就会返回没有权限的错误。(在工程实现上，如果命中查询缓存，会在查询缓存返回结果的时候，做权限验证。查询也会在优化器之前调用 precheck 验证权限)。</p>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>对于有索引的表，执行的逻辑也差不多。第一次调用的是“取满足条件的第一行”这个接口，之后循环取“满足条件的下一行”这个接口，这些接口都是引擎中已经定义好的。</p>
+<h1 id="Mysql的事务"><a href="#Mysql的事务" class="headerlink" title="Mysql的事务"></a>Mysql的事务</h1><h2 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h2><ol>
+<li>原子性</li>
+<li>一致性</li>
+<li>隔离性</li>
+<li>持久性</li>
+</ol>
+<h2 id="隔离性与隔离级别"><a href="#隔离性与隔离级别" class="headerlink" title="隔离性与隔离级别"></a>隔离性与隔离级别</h2><ol>
+<li>读未提交</li>
+<li>读已提交，可以解决脏读问题。</li>
+<li>可重复读，可以解决不可重复读问题。</li>
+<li>串行化，可以解决幻读问题。</li>
+</ol>
+<p>其中速度由上到下为递减。</p>
+<h2 id="长事务"><a href="#长事务" class="headerlink" title="长事务"></a>长事务</h2><p>长事务意味着系统里面会存在很老的事务视图。由于这些事务随时可能访问数据库里面的任何数据，所以这个事务提交之前，数据库里面它可能用到的回滚记录都必须保留，这就会导致大量占用存储空间。</p>
+<p>在 MySQL 5.5 及以前的版本，回滚日志是跟数据字典一起放在 ibdata 文件里的，即使长事务最终提交，回滚段被清理，文件也不会变小。我见过数据只有 20GB，而回滚段有 200GB 的库。最终只好为了清理回滚段，重建整个库。</p>
+<p>可以在 information_schema 库的 innodb_trx 这个表中查询长事务，比如下面这个语句，用于查找持续时间超过 60s 的事务。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> information_schema.innodb_trx <span class="hljs-keyword">where</span> TIME_TO_SEC(<span class="hljs-keyword">timediff</span>(<span class="hljs-keyword">now</span>(),trx_started))&gt;<span class="hljs-number">60</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="Mysql-日志"><a href="#Mysql-日志" class="headerlink" title="Mysql 日志"></a>Mysql 日志</h2><p>redo log 用于保证 crash-safe 能力。<code>innodb_flush_log_at_trx_commit</code> 这个参数设置成 1 的时候，表示每次事务的 redo log 都直接持久化到磁盘。这个参数我建议你设置成 1，这样可以保证 MySQL 异常重启之后数据不丢失。</p>
+<h3 id="redo-log-一般设置多大？"><a href="#redo-log-一般设置多大？" class="headerlink" title="redo log 一般设置多大？"></a>redo log 一般设置多大？</h3><p>redo log 太小的话，会导致很快就被写满，然后不得不强行刷 redo log，这样 WAL 机制的能力就发挥不出来了。如果是现在常见的几个 TB 的磁盘的话，直接将 redo log 设置为 4 个文件、每个文件 1GB 吧。</p>
+<p><code>sync_binlog</code> 这个参数设置成 1 的时候，表示每次事务的 binlog 都持久化到磁盘。这个参数我也建议你设置成 1，这样可以保证 MySQL 异常重启之后 binlog 不丢失。</p>
+<h2 id="Mysql索引"><a href="#Mysql索引" class="headerlink" title="Mysql索引"></a>Mysql索引</h2><p>索引的出现其实就是为了提高数据查询的效率，就像书的目录一样</p>
+<h3 id="常见的索引类型"><a href="#常见的索引类型" class="headerlink" title="常见的索引类型"></a>常见的索引类型</h3><ol>
+<li>哈希表，适用于K、V数据库，Memcached 及其他一些 NoSQL 引擎，适合等值查询，不支持范围查询，即<code>age&gt;10 and age &lt;20</code>。</li>
+<li>有序数组，在等值查询和范围查询场景中的性能就都非常优秀，频繁插入成本较高，有序数组索引只适用于静态存储引擎。</li>
+<li>搜索树，Mysql中的B+树，类似与平衡二叉树的M叉树，搜索效率为O(log<sub>M</sub>N),N为数据条数。</li>
+</ol>
+<h3 id="主键索引和普通索引的区别"><a href="#主键索引和普通索引的区别" class="headerlink" title="主键索引和普通索引的区别"></a>主键索引和普通索引的区别</h3><p>如果语句是 <code>select * from T where ID=500</code>，即主键查询方式，则只需要搜索 ID 这棵 B+ 树；如果语句是 <code>select * from T where k=5</code>，即普通索引查询方式，则需要先搜索 k 索引树，得到 ID 的值为 500，再到 ID 索引树搜索一次。这个过程称为回表。</p>
+<p>主键索引的叶子节点存的是<strong>整行数据</strong>。在 InnoDB 里，主键索引也被称为聚簇索引（clustered index）。</p>
+<p>非主键索引的叶子节点内容是主键的值。在 InnoDB 里，非主键索引也被称为二级索引（secondary index）</p>
+<p><strong>尽量使用主键索引进行查询防止回表</strong></p>
+<p>可以通过联合索引来优化回表问题，例如联合索引name、age，其中SQL语句<code>select name from T where age&gt;18</code>不用进行回表查询，因为叶子节点中记录着两个字段的信息。</p>
+<h2 id="索引维护"><a href="#索引维护" class="headerlink" title="索引维护"></a>索引维护</h2><p>Q：什么时候适合使用非主键自增值索引？</p>
+<p>A：在只有一个索引的情况下，且该索引是唯一索引，即典型的KV场景，但同时要考虑K的大小，例如Key是varchar(50)，那么相比int的4byte，大小，显然更加浪费存储空间。</p>
+<p><strong>从性能和存储空间方面考量，自增主键往往是更合理的选择。</strong></p>
+<h2 id="最左前缀原则"><a href="#最左前缀原则" class="headerlink" title="最左前缀原则"></a>最左前缀原则</h2><p>这里的评估标准是，索引的复用能力。因为可以支持最左前缀，所以当已经有了 (a,b) 这个联合索引后，一般就不需要单独在 a 上建立索引了。因此，第一原则是，如果通过调整顺序，可以少维护一个索引，那么这个顺序往往就是需要优先考虑采用的。</p>
+<p>如果既有联合查询，又有基于 a、b 各自的查询，查询条件里面只有 b 的语句，是无法使用 (a,b) 这个联合索引的，这时候你不得不维护另外一个索引，也就是说你需要同时维护 (a,b)、(b) 这两个索引。</p>
+<h2 id="索引下推优化"><a href="#索引下推优化" class="headerlink" title="索引下推优化"></a>索引下推优化</h2><p>MySQL 5.6 引入的索引下推优化，在索引遍历过程中，对索引中包含的字段先做判断，直接过滤掉不满足条件的记录，减少回表次数。</p>
+<h1 id="Mysql-锁"><a href="#Mysql-锁" class="headerlink" title="Mysql 锁"></a>Mysql 锁</h1><p><strong>根据加锁的范围，MySQL 里面的锁大致可以分成全局锁、表级锁和行锁三类</strong></p>
+<h2 id="全局锁"><a href="#全局锁" class="headerlink" title="全局锁"></a>全局锁</h2><p>全局锁就是对整个数据库实例加锁。MySQL 提供了一个加全局读锁的方法，命令是 Flush tables with read lock (FTWRL)。当你需要让整个库处于只读状态的时候，可以使用这个命令，之后其他线程的以下语句会被阻塞：数据更新语句（数据的增删改）、数据定义语句（包括建表、修改表结构等）和更新类事务的提交语句。<strong>全局锁的典型使用场景是，做全库逻辑备份。</strong>，为保证数据一致性的情况下备份，即一个业务同时更新A、B两个表，防止备份只备A表而漏掉B表。当然，也可以通过可重复读的隔离级别来保证视图一致性。不过要保证引擎是InnoDB，如果引擎是MyISAM就需要使用FTWRL命令了。</p>
+<p>Tips：官方自带的逻辑备份工具是 mysqldump。当 mysqldump 使用参数–single-transaction 的时候，导数据之前就会启动一个事务，来确保拿到一致性视图。但是因为事务问题，single-transaction 方法只适用于所有的表使用事务引擎的库。如果有的表使用了不支持事务的引擎，那么备份就只能通过 FTWRL 方法。</p>
+<h3 id="既然要全库只读，为什么不使用-set-global-readonly-true-的方式呢？"><a href="#既然要全库只读，为什么不使用-set-global-readonly-true-的方式呢？" class="headerlink" title="既然要全库只读，为什么不使用 set global readonly=true 的方式呢？"></a>既然要全库只读，为什么不使用 <code>set global readonly=true</code> 的方式呢？</h3><ol>
+<li><p>在有些系统中，readonly 的值会被用来做其他逻辑，比如用来判断一个库是主库还是备库。因此，修改 global 变量的方式影响面更大.</p>
+</li>
+<li><p>在异常处理机制上有差异。如果执行 FTWRL 命令之后由于客户端发生异常断开，那么 MySQL 会自动释放这个全局锁，整个库回到可以正常更新的状态。而将整个库设置为 readonly 之后，如果客户端发生异常，则数据库就会一直保持 readonly 状态，这样会导致整个库长时间处于不可写状态，风险较高。</p>
+</li>
+</ol>
+<h2 id="表级锁"><a href="#表级锁" class="headerlink" title="表级锁"></a>表级锁</h2><p>MySQL 里面表级别的锁有两种：一种是<strong>表锁</strong>，一种是<strong>元数据锁</strong>（meta data lock，MDL)。</p>
+<p>表锁的语法是 <code>lock tables … read/write</code>。与 FTWRL 类似，可以用 <code>unlock tables</code> 主动释放锁，也可以在客户端断开的时候自动释放。<strong>需要注意，lock tables 语法除了会限制别的线程的读写外，也限定了本线程接下来的操作对象。</strong></p>
+<p>举个例子, 如果在某个线程 A 中执行 lock tables t1 read, t2 write; 这个语句，则其他线程写 t1、读写 t2 的语句都会被阻塞。同时，线程 A 在执行 unlock tables 之前，也只能执行读 t1、读写 t2 的操作。连写 t1 都不允许，自然也不能访问其他表。</p>
+<p><strong>另一类表级的锁是 MDL（metadata lock)</strong>。MDL 不需要显式使用，在访问一个表的时候会被自动加上。MDL 的作用是，保证读写的正确性。</p>
+<p>在 MySQL 5.5 版本中引入了 MDL，当对一个表做增删改查操作的时候，加 MDL 读锁；当要对表做结构变更操作的时候，加 MDL 写锁。</p>
+<ul>
+<li><p>读锁之间不互斥，因此你可以有多个线程同时对一张表增删改查。</p>
+</li>
+<li><p>读写锁之间、写锁之间是互斥的，用来保证变更表结构操作的安全性。因此，如果有两个线程要同时给一个表加字段，其中一个要等另一个执行完才能开始执行。</p>
+</li>
+</ul>
+<blockquote>
+<p>注意：因为MDL锁读锁不阻塞，写锁阻塞，可能会导致长事务读锁阻塞写锁同时写锁阻塞后面的读锁导致产生问题，所以可以在 MySQL 的 information_schema 库的 innodb_trx 表中查到当前执行中的事务。如果你要做 DDL 变更的表刚好有长事务在执行，要考虑先暂停 DDL，或者 kill 掉这个长事务。但是如果该表是个热点表，kill可能未必管用，可以尝试设置alter table 设定等待超时时间，之后手动尝试。MariaDB 已经合并了 AliSQL 的这个功能，所以这两个开源分支目前都支持 DDL NOWAIT/WAIT n 这个语法。</p>
+</blockquote>
+<blockquote>
+<p>注意：在支持事务的表中尽量使用事务而不是表锁来保证数据一致性。</p>
+</blockquote>
+<h2 id="行级锁"><a href="#行级锁" class="headerlink" title="行级锁"></a>行级锁</h2><p>Mysql的行级锁由各个引擎实现，但并非所有的引擎都支持行级锁，例如MyISAM就不支持行级锁，常用的行级锁引擎有InnoDB</p>
+<h3 id="两阶段锁"><a href="#两阶段锁" class="headerlink" title="两阶段锁"></a>两阶段锁</h3><p><strong>在 InnoDB 事务中，行锁是在需要的时候才加上的，但并不是不需要了就立刻释放，而是要等到事务结束时才释放。这个就是两阶段锁协议。</strong> 如果你的事务中需要锁多个行，要把最可能造成锁冲突、最可能影响并发度的锁尽量往后放。比如事务A中有update、update、insert语句，更优的执行顺序应该是insert、update、update，让后两个update锁住行的时间尽可能的减少，用来提升应用的并发。</p>
+<h3 id="死锁和死锁检测"><a href="#死锁和死锁检测" class="headerlink" title="死锁和死锁检测"></a>死锁和死锁检测</h3><p><img src="https://static001.geekbang.org/resource/image/4d/52/4d0eeec7b136371b79248a0aed005a52.jpg" alt="lock"></p>
+<p>例如上面这个情况，就发生了死锁，事务A的第二条DML语句在等待事务B的第一条DML语句释放id=2的行锁，而事务B同时也在等待事务A释放id=1的行锁，导致两个事务相互锁死。</p>
+<p>解决办法：</p>
+<ul>
+<li>直接进入等待，直到超时。这个超时时间可以通过参数 innodb_lock_wait_timeout 来设置。</li>
+<li>发起死锁检测，发现死锁后，主动回滚死锁链条中的某一个事务，让其他事务得以继续执行。将参数 <code>innodb_deadlock_detect</code>(Mysql 8.0) 设置为 on，表示开启这个逻辑。</li>
+</ul>
+<p>第一种解决办法的默认超时时间为50秒。调低超时时间容易会产生“误伤”的情况，例如某些 事务在进行锁等待，结果被意外回滚。所以通常要采用第二种策略。但是在高并发的情况下，假设有一万个请求过来同时更新同一行数据，那么每个更新都会判断会不会因为自己而发生死锁，虽然最终检测的结果是没有死锁，但是这期间要消耗大量的 CPU 资源。因此，可能就会看到 CPU 利用率很高，但是每秒却执行不了几个事务。</p>
+<p><strong>怎么解决由这种热点行更新导致的性能问题呢？</strong></p>
+<ul>
+<li><p><strong>如果你能确保这个业务一定不会出现死锁，可以临时把死锁检测关掉。</strong> 但是这种操作本身带有一定的风险，因为业务设计的时候一般不会把死锁当做一个严重错误，毕竟出现死锁了，就回滚，然后通过业务重试一般就没问题了，这是业务无损的。而关掉死锁检测意味着可能会出现大量的超时，这是业务有损的。</p>
+</li>
+<li><p>另一个思路是控制并发度。在分布式项目中往往都是集群部署，所以建议在中间件中实现或者修改Mysql的源码。</p>
+</li>
+<li><p>也可以考虑通过将一行改成逻辑上的多行来减少锁冲突。还是以影院账户为例，可以考虑放在多条记录上，比如 10 个记录，影院的账户总额等于这 10 个记录的值的总和。这样每次要给影院账户加金额的时候，随机选其中一条记录来加。这样每次冲突概率变成原来的 1/10，可以减少锁等待个数，也就减少了死锁检测的 CPU 消耗。但这样会加重占用空间的负担。而且在做一些减法操作的时候，甚至可能需要操作多行的业务逻辑。</p>
+</li>
+</ul>
+<h2 id="视图"><a href="#视图" class="headerlink" title="视图"></a>视图</h2><p>在 MySQL 里，有两个“视图”的概念：</p>
+<ul>
+<li>一个是 view。它是一个用查询语句定义的虚拟表，在调用的时候执行查询语句并生成结果。创建视图的语法是 create view … ，而它的查询方法与表一样。</li>
+<li>另一个是 InnoDB 在实现 MVCC 时用到的一致性读视图，即 consistent read view，用于支持 RC（Read Committed，读提交）和 RR（Repeatable Read，可重复读）隔离级别的实现。</li>
+</ul>
+<h2 id="事务的启动时机"><a href="#事务的启动时机" class="headerlink" title="事务的启动时机"></a>事务的启动时机</h2><p><strong>begin/start transaction 命令并不是一个事务的起点，在执行到它们之后的第一个操作 InnoDB 表的语句，事务才真正启动。</strong> 如果你想要马上启动一个事务，可以使用 <code>start transaction with consistent snapshot</code> 这个命令。</p>
+<p>在实现上， InnoDB 为每个事务构造了一个数组，用来保存这个事务启动瞬间，当前正在“活跃”的所有事务 ID。“活跃”指的就是，启动了但还没提交。数组里面事务 ID 的最小值记为低水位，当前系统里面已经创建过的事务 ID 的最大值加 1 记为高水位。<br><img src="https://static001.geekbang.org/resource/image/88/5e/882114aaf55861832b4270d44507695e.png" alt="transcation"></p>
+<h2 id="事务间的规定"><a href="#事务间的规定" class="headerlink" title="事务间的规定"></a>事务间的规定</h2><p>MVCC(Multiversion concurrency control)中的可重复读事务实现：当事务A的版本id为100，在版本id为101的B事务更新了id=1的行数据，那么事务A 执行update的时候，会去读取当前值，即101版本修改后的值，在update后的select读取到的值不在是100版本，而是102版本，即本事务修改后的值，这一规定是防止B事务的更新丢失。<strong>更新数据都是先读后写的，而这个读，只能读当前的值，称为“当前读”（current read）。</strong> 除了 update 语句外，select 语句如果加锁，也是当前读。</p>
+<p>读提交的逻辑和可重复读的逻辑类似，它们最主要的区别是：</p>
+<ul>
+<li>在可重复读隔离级别下，只需要在事务开始的时候创建一致性视图，之后事务里的其他查询都共用这个一致性视图；</li>
+<li>在读提交隔离级别下，每一个语句执行前都会重新算出一个新的视图。</li>
+</ul>
+<p><code>start transaction with consistent snapshot</code>的意思是从这个语句开始，创建一个持续整个事务的一致性快照。而在读提交隔离级别下，这个用法就没意义了，等效于普通的 <code>start transaction</code>。</p>
+<blockquote>
+<p>注意： 在update的语句没有实际更新到行的时候不会更新每一行数据的trx_id</p>
+</blockquote>
+<h1 id="Mysql的读写"><a href="#Mysql的读写" class="headerlink" title="Mysql的读写"></a>Mysql的读写</h1><p>InnoDB 的数据是按数据页为单位来读写的，当需要读一条记录的时候，并不是将这个记录本身从磁盘读出来，而是以页为单位，将其整体读入内存。也就是说，当你查询相邻的数据，往往只是一次IO访问，在 InnoDB 中，每个数据页的大小默认是 16KB。</p>
+<h1 id="普通索引和唯一索引"><a href="#普通索引和唯一索引" class="headerlink" title="普通索引和唯一索引"></a>普通索引和唯一索引</h1><h2 id="查询过程"><a href="#查询过程" class="headerlink" title="查询过程"></a>查询过程</h2><p>普通索引和唯一索引的查询性能几乎相同，select id from T where k=1，普通索引在查找到第一个满足结果的时候会再去查找下个结果，由于B+树的性质，如果字段唯一，再查找的性能损耗也并不会消耗太多，而唯一索引会在查找到第一个结果的时候直接返回，二者差距微乎其微。</p>
+<h2 id="更新过程"><a href="#更新过程" class="headerlink" title="更新过程"></a>更新过程</h2><p>因为普通索引会利用到change buffer（低版本为insertBuffer，仅支持insert）。而唯一索引会为了判断是否重复而进行IO操作，直接进行更新，而不利用change buffer 的缓冲功能。所以在更新的情况下，普通索引相对于唯一索引，性能会更胜一筹，在高并发写的情况下，可以尽量使用普通索引。当然，如果修改的数据刚好存在于内存中的数据页中，更新的性能差距的是不存在的。change buffer 的大小默认是buffer pool的25%，最高可以调到buffer pool的50%。</p>
+<blockquote>
+<p>change buufer 实际上也是可以持久化的数据。</p>
+</blockquote>
+<h2 id="如何选择？"><a href="#如何选择？" class="headerlink" title="如何选择？"></a>如何选择？</h2><p>因为change buffer会缓存更新数据，在查询数据命中的change buffer中的数据所在的数据页的时候执行插入，所以，如果每次更新都伴随这一次查询，还是建议使用唯一索引而非普通索引。</p>
+<h2 id="change-buffer-的使用场景"><a href="#change-buffer-的使用场景" class="headerlink" title="change buffer 的使用场景"></a>change buffer 的使用场景</h2><p>对于写多读少的业务来说，页面在写完以后马上被访问到的概率比较小，此时 change buffer 的使用效果最好。这种业务模型常见的就是账单类、日志类的系统。反过来，假设一个业务的更新模式是写入之后马上会做查询，那么即使满足了条件，将更新先记录在 change buffer，但之后由于马上要访问这个数据页，会立即触发 merge 过程。这样随机访问 IO 的次数不会减少，反而增加了 change buffer 的维护代价。所以，对于这种业务模式来说，change buffer 反而起到了副作用。</p>
+<h1 id="优化器的逻辑"><a href="#优化器的逻辑" class="headerlink" title="优化器的逻辑"></a>优化器的逻辑</h1><p>选择索引是优化器的工作，而优化器选择索引的目的是找到一个最优的执行方案，并用最小的代价去执行，在数据库里面，选择索引会结合扫描行数、是否使用临时表、是否排序等因素进行综合判断。可以通过<code>explain</code>来查看优化器的选择。</p>
+<h2 id="优化器怎么判断扫描行数？"><a href="#优化器怎么判断扫描行数？" class="headerlink" title="优化器怎么判断扫描行数？"></a>优化器怎么判断扫描行数？</h2><p>Mysql根据统计信息估算记录数，统计信息就是索引的“区分度”。一个索引上不同的值越多，这个索引的区分度就越好。而一个索引上不同的值的个数，我们称之为“基数”（cardinality）。也就是说，这个基数越大，索引的区分度越好。可用通过<code>show index from table_name</code>来查看索引的基数。但索引基数并非精确值，而是从数据页中抽样统计出来的，即选取N个数据页求得平均值然后乘以数据页个数。数据表持续更新，索引的统计信息也会发生改变，当变更的数据行数超过 1/M 的时候，会自动触发重新做一次索引统计。也可以通过<code>analyze table table_name</code>来进行重新计算。</p>
+<p>在 MySQL 中，有两种存储索引统计的方式，可以通过设置参数 innodb_stats_persistent 的值来选择：</p>
+<ul>
+<li>设置为 on 的时候，表示统计信息会持久化存储。这时，默认的 N 是 20，M 是 10。</li>
+<li>设置为 off 的时候，表示统计信息只存储在内存中。这时，默认的 N 是 8，M 是 16。</li>
+</ul>
+<h2 id="索引选择异常和处理"><a href="#索引选择异常和处理" class="headerlink" title="索引选择异常和处理"></a>索引选择异常和处理</h2><ul>
+<li>采用 force index 强行选择一个索引，但是如果索引改了名字，这个语句也得改，显得很麻烦。迁移数据库也可能会产生语法兼容问题。</li>
+<li>可以考虑修改语句，引导 MySQL 使用我们期望的索引。但是往往修改都会影响到Sql语句的语义，且不具备通用性。</li>
+<li>可以新建一个更合适的索引，或者删除误用的索引，但一般经过 DBA 索引优化过的库，找到一个更合适的索引一般比较难。所以可以考虑删除误导的索引。</li>
+</ul>
+<h1 id="字符串索引的选择"><a href="#字符串索引的选择" class="headerlink" title="字符串索引的选择"></a>字符串索引的选择</h1><p>对于常用的字符串列，我们可能经常需要将其作为where的条件，但往往字符串索引会占据更多的空间，增重索引负担，所以我们可以通过<strong>前缀索引</strong> 来优化。</p>
+<h2 id="前缀索引"><a href="#前缀索引" class="headerlink" title="前缀索引"></a>前缀索引</h2><p>前缀索引<code>alter table tableName add index indexName(columnName(6));</code>，其中数字6是前缀索引的长度，可以自定义，不填则将整个字符串作为索引，前缀索引的工作原理是利用字符串的前N的字符进行索引，然后根据搜索出来的数据再进行回表搜索判断。选择前缀索引要取舍字符串长度和索引列的辨识度，辨识度越低的列查询回表次数会越高。可以通过</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <br>  <span class="hljs-keyword">count</span>(<span class="hljs-keyword">distinct</span> <span class="hljs-keyword">left</span>(columnName,<span class="hljs-number">4</span>)）<span class="hljs-keyword">as</span> L4, <br>  <span class="hljs-keyword">count</span>(<span class="hljs-keyword">distinct</span> <span class="hljs-keyword">left</span>(columnName,<span class="hljs-number">5</span>)）<span class="hljs-keyword">as</span> L5, <br>  <span class="hljs-keyword">count</span>(<span class="hljs-keyword">distinct</span> <span class="hljs-keyword">left</span>(columnName,<span class="hljs-number">6</span>)）<span class="hljs-keyword">as</span> L6, <br>  <span class="hljs-keyword">count</span>(<span class="hljs-keyword">distinct</span> <span class="hljs-keyword">left</span>(columnName,<span class="hljs-number">7</span>)）<span class="hljs-keyword">as</span> L7 <br>  ...<br><span class="hljs-keyword">from</span> tableName;<br></code></pre></td></tr></table></figure>
+<p>来选择前缀索引的字符串长度。</p>
+<h2 id="类似身份证号这种前缀辨识度低的字符串"><a href="#类似身份证号这种前缀辨识度低的字符串" class="headerlink" title="类似身份证号这种前缀辨识度低的字符串"></a>类似身份证号这种前缀辨识度低的字符串</h2><p>类似身份证号这种字符串，同一地区前六位都是相同的，数据辨识率相当低，MySQL又没有所谓的后缀索引，引用前缀12个字符又显得相当浪费，应该怎么办呢？</p>
+<ul>
+<li>使用倒序存储。如果你存储身份证号的时候把它倒过来存，每次查询的时候，你可以这么写：<code>where id_card = reverse(&#39;input_id_card_string&#39;)</code>。</li>
+<li>新增hash字段，在插入的时候对身份证号进行hash，例如使用crc32 function。</li>
+</ul>
+<p>两者的优劣显而易见，hash具有更高的辨识度但却占用了更多空间，且hash函数的资源浪费是大于reverse函数的。</p>
+<h1 id="引发MySQL偶尔很慢的原因"><a href="#引发MySQL偶尔很慢的原因" class="headerlink" title="引发MySQL偶尔很慢的原因"></a>引发MySQL偶尔很慢的原因</h1><p>平时执行很快的更新操作，其实就是在写内存和日志，而 MySQL 偶尔“卡”一下的那个瞬间，可能就是在刷脏页（flush）。</p>
+<h2 id="什么时候会刷脏页呢"><a href="#什么时候会刷脏页呢" class="headerlink" title="什么时候会刷脏页呢"></a>什么时候会刷脏页呢</h2><ol>
+<li>InnoDB 的 redo log 写满了。这时候系统会停止所有更新操作，把 checkpoint 往前推进，redo log 留出空间可以继续写。</li>
+<li>数据库发生大量插入，系统内存不足以添加新的内存页，就要淘汰一些旧的内存页，而这些脏内存页就是要flush。</li>
+<li>MySQL认为系统空闲的时候，会自动的刷脏页。</li>
+<li>MySQL正常关闭的时候也会进行刷脏，可以令下次启动速度加快。</li>
+</ol>
+<p>第三第四种情况通常不会影响数据库性能问题，而第一种情况是应该被避免的问题，在系统flush redo log 的时候，会阻塞所有更新操作。</p>
+<p>第二种情况就要细分内存中的数据页的情况了，内存中的数据页包含以下几种情况。</p>
+<ul>
+<li>还没有使用的数据页。</li>
+<li>使用了并且是干净页，这种数据页可以直接淘汰后被重复利用。</li>
+<li>使用了并且是脏页，当数据涉及到脏页时就要被flush。</li>
+</ul>
+<p>当要读入的数据页没有在内存的时候，就必须到缓冲池中申请一个数据页。这时候只能把最久不使用的数据页从内存中淘汰掉：如果要淘汰的是一个干净页，就直接释放出来复用；但如果是脏页呢，就必须将脏页先刷到磁盘，变成干净页后才能复用。</p>
+<p>刷脏页虽然是常态，但是出现以下这两种情况，都是会明显影响性能的：</p>
+<ol>
+<li>一个查询要淘汰的脏页个数太多，会导致查询的响应时间明显变长；</li>
+<li>日志写满，更新全部堵住，写性能跌为 0，这种情况对敏感业务来说，是不能接受的。</li>
+</ol>
+<h2 id="InnoDB-脏页的控制策略，以及相关的参数。"><a href="#InnoDB-脏页的控制策略，以及相关的参数。" class="headerlink" title="InnoDB 脏页的控制策略，以及相关的参数。"></a>InnoDB 脏页的控制策略，以及相关的参数。</h2><ul>
+<li><code>innodb_io_capacity</code> :  InnoDB 磁盘全力刷脏页能力。这个值建议设置成磁盘的 IOPS。磁盘的 IOPS 可以通过 fio 这个工具来测试(执行命令：<code>fio -filename=$filename -direct=1 -iodepth 1 -thread -rw=randrw -ioengine=psync -bs=16k -size=500M -numjobs=10 -runtime=10 -group_reporting -name=mytest</code>) macOS 19Pro SSD测试值在2500，通常SSD都会在2000左右。</li>
+<li><code>innodb_max_dirty_pages_pct</code>: 脏页比例上限，默认值是 75%。虽然已经定义了“全力刷脏页”的行为，但平时总不能一直是全力刷。InnoDB 怎么控制引擎按照“全力”的百分比来刷脏页。</li>
+</ul>
+<p>一旦一个查询请求需要在执行过程中先 flush 掉一个脏页时，这个查询就可能要比平时慢了。而 MySQL 中的一个机制，可能让查询会更慢：在准备刷一个脏页的时候，如果这个数据页旁边的数据页刚好是脏页，就会把这个“邻居”也带着一起刷掉；而且这个把“邻居”拖下水的逻辑还可以继续蔓延，也就是对于每个邻居数据页，如果跟它相邻的数据页也还是脏页的话，也会被放到一起刷。</p>
+<p>在 InnoDB 中，<code>innodb_flush_neighbors</code> 参数就是用来控制这个行为的，值为 1 的时候会有上述的“连坐”机制，值为 0 时表示不找邻居，自己刷自己的。</p>
+<p>找“邻居”这个优化在机械硬盘时代是很有意义的，可以减少很多随机 IO。机械硬盘的随机 IOPS 一般只有几百，相同的逻辑操作减少随机 IO 就意味着系统性能的大幅度提升。而如果使用的是 SSD 这类 IOPS 比较高的设备的话，我就建议你把 <code>innodb_flush_neighbors</code> 的值设置成 0。因为这时候 IOPS 往往不是瓶颈，而“只刷自己”，就能更快地执行完必要的刷脏页操作，减少 SQL 语句响应时间。在 MySQL 8.0 中，<code>innodb_flush_neighbors</code> 参数的默认值已经是 0 了。</p>
+<h1 id="表数据与表空间"><a href="#表数据与表空间" class="headerlink" title="表数据与表空间"></a>表数据与表空间</h1><p>一个 InnoDB 表包含两部分。</p>
+<ul>
+<li>表结构定义</li>
+<li>数据</li>
+</ul>
+<p>在 MySQL 8.0 版本以前，表结构是存在以.frm 为后缀的文件里。而 MySQL 8.0 版本，则已经允许把表结构定义放在系统数据表中了。因为表结构定义占用的空间很小。</p>
+<p>其中，表数据既可以存在共享表空间里，也可以是单独的文件。这个行为是由参数 <code>innodb_file_per_table</code> 控制的。这个参数设置为 OFF 表示表的数据放在系统共享表空间，也就是跟数据字典放在一起；这个参数设置为 ON 表示每个 InnoDB 表数据存储在一个以<code>.ibd</code>为后缀的文件中。</p>
+<p>从 MySQL 5.6.6 版本开始，它的默认值就是 ON 了。建议无论在任何情况下都将此选项设置为ON，可以方便管理表数据，在drop table时，如果表空间是共享数据，那么表空间依然不会得到释放，而单个数据文件的情况下会被直接删除。</p>
+<p>但是我们删除单个记录，就会出现很多种情况，我们已经知道MySQL的数据是按数据页进行保存（由于B+数的性质）。当我们删除了单个数据页时，可能出现两种情况：</p>
+<ol>
+<li>删除单个数据后，数据页不为空，假设当前数据页的数据范围在id  between 100,200之间。那么当数据删除后，又重新添加id为100-200之间的数据，会重复利用数据页上的空间，但是数据页上的空间并不会因为数据被删除而减小文件大小。</li>
+<li>删除单个数据后，数据页为空，此时数据页是游离态，可被复用，但仍然不会从磁盘中释放出空间，当需要使用新的数据页时，该数据页将会被复用。</li>
+<li>如果相邻的两个数据页的利用率都很小的，MySQL会将数据页的内容进行合并，从而释放出一个游离的可复用的数据页。</li>
+</ol>
+<p>同样，因为B+树的原因，数据在大量新增和删除以后，B+树的数据页中会存在大量空缺，这往往是因为添加的时候造成页分裂，或者删除的时候导致页的空缺，从而使得B+树利用不够充分，产生空洞，过多的浪费内存空间。</p>
+<p>为了去除大量增删表中的数据空洞，可以尝试重建表并将数据克隆过去来优化本地磁盘上的数据文件大小。有以下解决方案：</p>
+<ul>
+<li><code>alter table A engine=InnoDB</code>，在MySQL5.5版本之前，MySQL 会自动完成转存数据、交换表名、删除旧表的操作。因为这个操作是DDL操作，会给表加上MDL写锁，导致整个表的更新被阻塞，并非一个Online操作，在生产环境往往无法使用。</li>
+<li>5.6版本以后，MySQL将这个操作改成Online DDL操作，这个操作在刚开始的时候会获取MDL写锁，但是在真正拷贝数据的时候，会降级为MDL读锁，然后将原来表的所有操作都记录在rowlog中，在同步完成后，将rowlog重新写入到新表中。但是这个操作相当消耗磁盘IO和CPU，如果是线上服务，推荐使用Github上开源的相关项目，例如gh-ost</li>
+</ul>
+<h1 id="MySQL中的count操作"><a href="#MySQL中的count操作" class="headerlink" title="MySQL中的count操作"></a>MySQL中的count操作</h1><p>count可以说是平时查询相较于使用比较频繁的函数了。萝卜青菜，各有所爱，有的人喜欢使用<code>count(*)</code> 、有的人喜欢使用<code>count(1)</code>、<code>count(id)</code>等等。</p>
+<h2 id="count的执行流程"><a href="#count的执行流程" class="headerlink" title="count的执行流程"></a>count的执行流程</h2><p>平时不了解可能会认为count会在数据内部中有个计数，查询的时候直接返回，实则并非这样，在MyISAM这种非事务的引擎中，count确实有计数，但是在InnoDB这种事务引擎中，count并不能在复杂的事务场景下计数，往往都是遍历整表来进行计数。count遍历整表，当表中数据量过亿时，整表的遍历就会相当的慢了，如果仍要用到该表的count数据，可以通过别的手段来实现，例如在业务逻辑中为添加操作执行一个专门用来计数的count表，令其数据+1，但是这个数据并不可以在Redis这些缓存数据库当中</p>
+<h2 id="如何去优化count问题？"><a href="#如何去优化count问题？" class="headerlink" title="如何去优化count问题？"></a>如何去优化count问题？</h2><ul>
+<li><p>在数据量相当大且需要经常统计行数的表，建议使用事务（在对表进行增加或者删除的时候同时更新另一个统计表的数据），reids不适用在此场景下不适应，一是会存在Redis宕机的情况导致数据不准确，二是因为事务回滚问题可能会导致数据不准确。（分布式事务问题，尽可能避免，redis先+1可能会产生数据库回滚，redis后+1可能会在插入数据的一瞬间进行统计）<br>所以此场景下尽可能的去使用数据库事务，利用一致性视图来保证数据准确。</p>
+</li>
+<li><p>在一些不经常统计的表中，给出每种count的性能比较 <code>count(字段)&lt;count(主键 id)&lt;count(1)≈count(*)</code> ，即 count(<em>) 和 count(1)性能最优，count(</em>)经过mysql的优化，而count(1)每遍历一行就填充一个1，count(id)每遍历一行要取出id进行填充，所以尽可能的避免使用前两者。</p>
+</li>
+</ul>
+<h1 id="Order-By"><a href="#Order-By" class="headerlink" title="Order By"></a>Order By</h1><p>分析排序我们可以通过命令<code>explain</code>来分析Extra中的信息，其中<code>Using filesort</code> 表示需要排序，MySQL 会给每个线程分配一块内存用于排序，称为 sort_buffer。</p>
+<h2 id="Sort-Buffer"><a href="#Sort-Buffer" class="headerlink" title="Sort Buffer"></a>Sort Buffer</h2><p>按字段排序，可能在内存中排序，也可能在文件中排序，这取决于排序字段的大小和<code>sort_buffer_size</code></p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><code class="hljs sql"><br><span class="hljs-comment">/* 打开optimizer_trace，只对本线程有效 */</span><br><span class="hljs-keyword">SET</span> optimizer_trace=<span class="hljs-string">'enabled=on'</span>; <br><br><span class="hljs-comment">/* @a保存Innodb_rows_read的初始值 */</span><br><span class="hljs-keyword">select</span> VARIABLE_VALUE <span class="hljs-keyword">into</span> @a <span class="hljs-keyword">from</span>  performance_schema.session_status <span class="hljs-keyword">where</span> variable_name = <span class="hljs-string">'Innodb_rows_read'</span>;<br><br><span class="hljs-comment">/* 执行语句 */</span><br><span class="hljs-keyword">select</span> city, <span class="hljs-keyword">name</span>,age <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> city=<span class="hljs-string">'杭州'</span> <span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">name</span> <span class="hljs-keyword">limit</span> <span class="hljs-number">1000</span>;<br><br><span class="hljs-comment">/* 查看 OPTIMIZER_TRACE 输出 */</span><br><span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> <span class="hljs-string">`information_schema`</span>.<span class="hljs-string">`OPTIMIZER_TRACE`</span>\G<br><br><span class="hljs-comment">/* @b保存Innodb_rows_read的当前值 */</span><br><span class="hljs-keyword">select</span> VARIABLE_VALUE <span class="hljs-keyword">into</span> @b <span class="hljs-keyword">from</span> performance_schema.session_status <span class="hljs-keyword">where</span> variable_name = <span class="hljs-string">'Innodb_rows_read'</span>;<br><br><span class="hljs-comment">/* 计算Innodb_rows_read差值 */</span><br><span class="hljs-keyword">select</span> @b-@a;<br></code></pre></td></tr></table></figure>
+<p>这个方法是通过查看 <code>OPTIMIZER_TRACE</code> 的结果来确认的，你可以从 <code>number_of_tmp_files</code> 中看到是否使用了临时文件。如果该参数显示为<code>0</code>，则意味排序在SortBuffer 中进行，并没有用到磁盘文件作为辅助排序。其中<code>sort_buffer_size</code>越小，需要分成的份数越多<code>number_of_tmp_files</code>的值就越大。</p>
+<p>当使用外部文件排序的时候，一般会使用归并排序算法。MySQL会把这些数据分成若干份，然后把这些有序文件合并成一个大的有序文件。</p>
+<p><strong>这里需要注意的是，为了避免对结论造成干扰</strong>，请把 <code>internal_tmp_disk_storage_engine</code> 设置成 <code>MyISAM</code>。否则，<code>select @b-@a</code> 的结果会显示为 <code>4001</code>。这是因为查询 <code>OPTIMIZER_TRACE</code> 这个表时，需要用到临时表，而 <code>internal_tmp_disk_storage_engine</code> 的默认值是 <code>InnoDB</code>。如果使用的是 <code>InnoDB</code> 引擎的话，把数据从临时表取出来的时候，会让 <code>Innodb_rows_read</code> 的值加 1。</p>
+<p>如果你的SQL语句查询的单行数据量过大，会让sort buffer的实际利用率降低，MySQL此时会采用rowid来进行查询，可以通过<code>SET max_length_for_sort_data = 16;</code>来调控这个阀值，其中单位是byte，整型=4byte。当使用rowid（通常是主键id），需要通过索引回表查询数据。</p>
+<p>如果sort buffer 足够大，MySQL通常会采用全字段排序，而不是rowid排序，这也就体现了 MySQL 的一个设计思想：<strong>如果内存够，就要多利用内存，尽量减少磁盘访问。</strong></p>
+<p>如果这个排序能使用的到索引，基于B+树的性质，显然就不需要排序了，查询出来的数据本身就是具有顺序的，而如果使用的覆盖索引，甚至不用回表查询。</p>
+<h1 id="常见的索引失效的情况"><a href="#常见的索引失效的情况" class="headerlink" title="常见的索引失效的情况"></a>常见的索引失效的情况</h1><ul>
+<li><strong>条件字段函数操作</strong> ，例如对列执行了一些转换函数，在通常情况，应该考虑条件参数是否可以被转换，而不是去转换条件列。因为函数操作会破坏索引的有序性。</li>
+<li><strong>隐式类型转换</strong> ，常见的隐式类型转例如：<code>where name=123</code>，这样的数据，MySQL会将name字段CAST INT，而不是将123转为String。比较的原则是优先将字符串转换为数字，所以<code>where id=&quot;123&quot;</code>并不会导致索引失效。</li>
+<li><strong>隐式的编码转换</strong> ， 通常在连表查询的时候，会产生这种情况，例如表A的name字段的编码是<code>utf8</code>，而表B的那么字段是<code>utf8mb4</code>，那么就会导致索引在连表的时候失效。其中<code>utf8mb4</code>是MySQL为了修复某些字的BUG的编码，在设计数据库的时候应当总是使用<code>utf8mb4</code>而非<code>utf8</code>。</li>
+</ul>
+<p>总的来说，当你破坏索引的有序性的时候，优化器就决定放弃走树搜索功能。</p>
+</div></article><div class="post-view__sidebar"><div class="sidebar"><div class="tocbot"><h2>Toc</h2><div class="toc__content"></div></div><h2>Links</h2><div class="sidebar__link"><ul><li><a href="https://github.com/jackjun724" target="_blank" rel="noopener">Github</a></li><li><a href="https://www.zhihu.com/people/wang-jun-jie-20-30" target="_blank" rel="noopener">知乎</a></li><li><a href="/jack@retzero.com">Mail</a></li></ul></div><h2>Categories</h2><div class="sidebar__categories"></div><h2>Tags</h2><div class="sidebar__tags"><ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL/" rel="tag">MySQL</a></li></ul></div></div></div></div><div class="horizontal-line" style="height: 1px"></div><div class="main__bottom"><div class="pre-next"><a class="pre-button">没有更多</a><a class="next-button">没有更多</a></div><div id="comments"></div></div></div></div><div class="footer"><span>©️2019-2020 Designed By&nbsp;<strong><a href="https://github.com/random-yang" target="_blank" rel="noopener">RandomYang</a></strong> Powered By&nbsp;</span><strong><a href="https://hexo.io" target="_blank" rel="noopener">hexo</a></strong></div><div class="darkmode-mask" id="darkmode-mask"></div><div class="sidebar__button"></div></body></html>
