@@ -1,6 +1,6 @@
 ---
 title: Java并发编程
-tags: [MySQL,Performance]
+tags: [Java,Concurrent]
 ---
 
 # 并发编程大纲
