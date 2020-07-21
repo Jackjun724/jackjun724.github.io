@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0"><meta name="description" content="Java并发编程 [ Stay Hungry, Stay Foolish ] "><meta name="theme-color" content="#ebc65a"><title>Java并发编程 [ Stay Hungry, Stay Foolish ] </title><link rel="shortcut icon" href="/favicon.ico"><link rel="stylesheet" href="/css/index.css"><script src="https://cdn.bootcss.com/highlight.js/9.6.0/highlight.min.js" defer></script><script src="/js/paper.js" defer></script><script src="https://www.googletagmanager.com/gtag/js?id=UA-173003606-1" async></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-173003606-1');</script><script src="https://www.unpkg.com/valine/dist/Valine.min.js" defer></script><script>window.addEventListener('DOMContentLoaded', () => {
+  new Valine({
+    el: '#comments',
+    appId: 'GyF9w7cCtdicxaKfHKJyjjC9-gzGzoHsz',
+    appKey: 'mquBGDELW6u70BiizXk1HGnH',
+    notify: true,
+    verify: true,
+    avatar: 'mp',
+    placeholder: '文明发言是交流的起点',
+  })
+})</script><link rel="stylesheet" href="/css/tocbot.css"><script src="/js/tocbot.js" defer></script><script>window.addEventListener('DOMContentLoaded', () => {
+  tocbot.init({
+    // Where to render the table of contents.
+    tocSelector: '.toc__content',
+    // Where to grab the headings to build the table of contents.
+    contentSelector: '.article__content',
+    // Which headings to grab inside of the contentSelector element.
+    headingSelector: 'h1, h2, h3, h4, h5, h6',
+    // For headings inside relative or absolute positioned containers within content.
+    hasInnerContainers: true,
+    orderedList: false,
+    collapseDepth: 2,
+  });
+})</script><link rel="preload" href="https://cdn.bootcss.com/highlight.js/9.6.0/styles/github.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"><link rel="stylesheet" href="https://cdn.bootcss.com/highlight.js/9.6.0/styles/github.min.css"><link rel="preload" href="https://fonts.googleapis.com/css?family=Abril+Fatface&amp;display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface&amp;display=swap"><meta name="generator" content="Hexo 4.2.1"></head><body><div class="mask-border"></div><div class="head"><div class="head__inner"><h1><a href="/">Stay Hungry, Stay Foolish</a></h1><p>Development blog</p></div></div><div class="paper-container"><div class="main"><div class="location-bar"><div class="line-1"><div class="horizontal-line" style="height: 3px"></div></div><div class="line-2"><div class="horizontal-line" style="height: 1px"></div></div><p class="text">Java并发编程</p><div class="switch-button"><input class="container_toggle" type="checkbox" id="switch" name="mode"><label for="switch">Toggle</label></div><div class="line-3"><div class="horizontal-line" style="height: 1px"></div></div></div><div class="main__2-col"><article class="post-view__article"><div class="article__infomation"><div class="posts-item"><h2 class="posts-item__title"><a href="">Java并发编程</a></h2><span class="post__date">2020-07-21</span><a href="/tags/MySQL/"><span class="post__tags">#MySQL</span></a><a href="/tags/Performance/"><span class="post__tags">#Performance</span></a></div></div><div class="article__content"><h1 id="并发编程大纲"><a href="#并发编程大纲" class="headerlink" title="并发编程大纲"></a>并发编程大纲</h1><p><a href="https://www.edrawsoft.cn/viewer/public/s/58584187260790" target="_blank" rel="noopener">分工、协作、互斥</a></p>
+<h1 id="并发问题三大源头"><a href="#并发问题三大源头" class="headerlink" title="并发问题三大源头"></a>并发问题三大源头</h1><h2 id="可见性"><a href="#可见性" class="headerlink" title="可见性"></a>可见性</h2><ul>
+<li><p>问题原因 ： 由于CPU缓存导致的可见性问题，多个线程同时操作一个共享变量由于存在CPU缓存，可能导致更新失效。</p>
+</li>
+<li><p>解决办法 ： 使用volatile关键字，底层由Java屏障支持，禁止汇编指令优化，禁用该变量CPU缓存。</p>
+</li>
+</ul>
+<h2 id="原子性"><a href="#原子性" class="headerlink" title="原子性"></a>原子性</h2><ul>
+<li><p>问题原因： 由于CPU上下文调度，而导致一组操作非原子化，进而引发的并发问题。</p>
+</li>
+<li><p>解决办法： 使操作原子化，可以用Lock、Synchronized、CAS等一些并发工具实现。</p>
+</li>
+</ul>
+<h2 id="有序性"><a href="#有序性" class="headerlink" title="有序性"></a>有序性</h2><ul>
+<li><p>问题原因： Java对代码进行汇编优化，导致代码并没有按我们想象的顺序执行（因为遵守Happens-Before原则，后面的行总在前面的行执行，这里是说同一行代码）</p>
+</li>
+<li><p>解决办法： 加锁</p>
+</li>
+</ul>
+<h1 id="Java内存模型（JMM）"><a href="#Java内存模型（JMM）" class="headerlink" title="Java内存模型（JMM）"></a>Java内存模型（JMM）</h1><blockquote>
+<p>Java 内存模型规范了 JVM 如何提供按需禁用缓存和编译优化的方法。具体来说，这些方法包括 volatile、synchronized 和 final 三个关键字，以及六项 Happens-Before 规则</p>
+</blockquote>
+<h3 id="Happens-Before"><a href="#Happens-Before" class="headerlink" title="Happens-Before"></a>Happens-Before</h3><h4 id="顺序性规则："><a href="#顺序性规则：" class="headerlink" title="顺序性规则："></a>顺序性规则：</h4><p>这条规则是指在一个线程中，按照程序顺序，前面的操作 Happens-Before 于后续的任意操作。</p>
+<h4 id="volatile-变量规则"><a href="#volatile-变量规则" class="headerlink" title="volatile 变量规则"></a>volatile 变量规则</h4><p>这条规则是指对一个 volatile 变量的写操作， Happens-Before 于后续对这个 volatile 变量的读操作。</p>
+<h4 id="传递性规则"><a href="#传递性规则" class="headerlink" title="传递性规则"></a>传递性规则</h4><p>这条规则是指如果 A Happens-Before B，且 B Happens-Before C，那么 A Happens-Before C。</p>
+<h4 id="管程中锁的规则"><a href="#管程中锁的规则" class="headerlink" title="管程中锁的规则"></a>管程中锁的规则</h4><p>这条规则是指对一个锁的解锁 Happens-Before 于后续对这个锁的加锁。</p>
+<h4 id="线程-start-规则"><a href="#线程-start-规则" class="headerlink" title="线程 start() 规则"></a>线程 start() 规则</h4><p>这条是关于线程启动的。它是指主线程 A 启动子线程 B 后，子线程 B 能够看到主线程在启动子线程 B 前的操作。</p>
+<h4 id="线程-join-规则"><a href="#线程-join-规则" class="headerlink" title="线程 join() 规则"></a>线程 join() 规则</h4><p>是指主线程 A 等待子线程 B 完成（主线程 A 通过调用子线程 B 的 join() 方法实现），当子线程 B 完成后（主线程 A 中 join() 方法返回），主线程能够看到子线程的操作。</p>
+<h4 id="final变量"><a href="#final变量" class="headerlink" title="final变量"></a>final变量</h4><p>final 修饰变量时，初衷是告诉编译器：这个变量生而不变，可以使劲儿优化。</p>
+<h3 id="Ref"><a href="#Ref" class="headerlink" title="Ref"></a>Ref</h3><p><a href="http://ifeve.com/jmm-faq/" target="_blank" rel="noopener">Java内存模型FAQ</a></p>
+<h1 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h1><h2 id="产生死锁的情况"><a href="#产生死锁的情况" class="headerlink" title="产生死锁的情况"></a>产生死锁的情况</h2><p>只有以下这四个条件都发生时才会出现死锁：</p>
+<ol>
+<li>互斥，共享资源 X 和 Y 只能被一个线程占用；</li>
+<li>占有且等待，线程 T1 已经取得共享资源 X，在等待共享资源 Y 的时候，不释放共享资源 X；</li>
+<li>不可抢占，其他线程不能强行抢占线程 T1 占有的资源；</li>
+<li>循环等待，线程 T1 等待线程 T2 占有的资源，线程 T2 等待线程 T1 占有的资源，就是循环等待。</li>
+</ol>
+<h2 id="破坏死锁"><a href="#破坏死锁" class="headerlink" title="破坏死锁"></a>破坏死锁</h2><p>反过来分析，也就是说只要我们破坏其中一个死锁条件，就可以成功避免死锁的发生。其中，互斥这个条件我们没有办法破坏，因为我们用锁为的就是互斥。</p>
+<ol>
+<li>对于<code>占用且等待</code>，我们可以一次性申请所有的资源。</li>
+<li>对于<code>不可抢占</code>，占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它占有的资源。</li>
+<li>对于<code>循环等待</code>，可以靠按序申请资源来预防。所谓按序申请，是指资源是有线性顺序的，申请的时候可以先申请资源序号小的，再申请资源序号大的。</li>
+</ol>
+<h1 id="线程饥饿-与-活锁"><a href="#线程饥饿-与-活锁" class="headerlink" title="线程饥饿 与 活锁"></a>线程饥饿 与 活锁</h1><blockquote>
+<p>但<strong>有时线程虽然没有发生阻塞，但仍然会存在执行不下去的情况，这就是所谓的“活锁”。</strong> 可以类比现实世界里的例子，路人甲从左手边出门，路人乙从右手边进门，两人为了不相撞，互相谦让，路人甲让路走右手边，路人乙也让路走左手边，结果是两人又相撞了。这种情况，基本上谦让几次就解决了，因为人会交流啊。可是如果这种情况发生在编程世界了，就有可能会一直没完没了地“谦让”下去，成为没有发生阻塞但依然执行不下去的“活锁”。解决“活锁”的方案很简单，谦让时，尝试等待一个随机的时间就可以了。例如上面的那个例子，路人甲走左手边发现前面有人，并不是立刻换到右手边，而是等待一个随机的时间后，再换到右手边；同样，路人乙也不是立刻切换路线，也是等待一个随机的时间再切换。由于路人甲和路人乙等待的时间是随机的，所以同时相撞后再次相撞的概率就很低了。“等待一个随机时间”的方案虽然很简单，却非常有效，Raft 这样知名的分布式一致性算法中也用到了它。</p>
+</blockquote>
+<blockquote>
+<p><strong>所谓“饥饿”指的是线程因无法访问所需资源而无法执行下去的情况。</strong>“不患寡，而患不均”，如果线程优先级“不均”，在 CPU 繁忙的情况下，优先级低的线程得到执行的机会很小，就可能发生线程“饥饿”；持有锁的线程，如果执行的时间过长，也可能导致“饥饿”问题。解决“饥饿”问题的方案很简单，有三种方案：一是保证资源充足，二是公平地分配资源，三就是避免持有锁的线程长时间执行。这三个方案中，方案一和方案三的适用场景比较有限，因为很多场景下，资源的稀缺性是没办法解决的，持有锁的线程执行的时间也很难缩短。倒是方案二的适用场景相对来说更多一些。</p>
+</blockquote>
+<h2 id="尽量使用notifyAll而非notify"><a href="#尽量使用notifyAll而非notify" class="headerlink" title="尽量使用notifyAll而非notify"></a>尽量使用notifyAll而非notify</h2><p><strong>notify() 是会随机地通知等待队列中的一个线程，而 notifyAll() 会通知等待队列中的所有线程。</strong> 从感觉上来讲，应该是 notify() 更好一些，因为即便通知所有线程，也只有一个线程能够进入临界区。但那所谓的感觉往往都蕴藏着风险，实际上使用 notify() 也很有风险，它的风险在于可能导致某些线程永远不会被通知到。</p>
+<h1 id="竞态条件（Race-Condition）"><a href="#竞态条件（Race-Condition）" class="headerlink" title="竞态条件（Race Condition）"></a>竞态条件（Race Condition）</h1><p><strong>竞态条件，指的是程序的执行结果依赖线程执行的顺序。</strong> 竞态条件的解决方案就是<code>互斥</code>。</p>
+<h1 id="锁的性能"><a href="#锁的性能" class="headerlink" title="锁的性能"></a>锁的性能</h1><p><strong>S=1/((1−p)+p/n)</strong></p>
+<p>​<br>公式里的 n 可以理解为 CPU 的核数，p 可以理解为并行百分比，那（1-p）就是串行百分比</p>
+<blockquote>
+<p>第一，既然使用锁会带来性能问题，那最好的方案自然就是使用无锁的算法和数据结构了。在这方面有很多相关的技术，例如线程本地存储 (Thread Local Storage, TLS)、写入时复制 (Copy-on-write)、乐观锁等；Java 并发包里面的原子类也是一种无锁的数据结构；Disruptor 则是一个无锁的内存队列，性能都非常好。</p>
+</blockquote>
+<blockquote>
+<p>第二，减少锁持有的时间。互斥锁本质上是将并行的程序串行化，所以要增加并行度，一定要减少持有锁的时间。这个方案具体的实现技术也有很多，例如使用细粒度的锁，一个典型的例子就是 Java 并发包里的 ConcurrentHashMap，它使用了所谓分段锁的技术（这个技术后面我们会详细介绍）；还可以使用读写锁，也就是读是无锁的，只有写的时候才会互斥。</p>
+</blockquote>
+<h1 id="线程的状态"><a href="#线程的状态" class="headerlink" title="线程的状态"></a>线程的状态</h1><ol>
+<li>NEW（初始化状态）</li>
+<li>RUNNABLE（可运行 / 运行状态）</li>
+<li>BLOCKED（阻塞状态）</li>
+<li>WAITING（无时限等待）</li>
+<li>TIMED_WAITING（有时限等待）</li>
+<li>TERMINATED（终止状态）</li>
+</ol>
+<p>要注意的是：在操作系统层面，Java 线程中的 <code>BLOCKED</code>、<code>WAITING</code>、<code>TIMED_WAITING</code> 是一种状态，即前面我们提到的休眠状态。也就是说只要 Java 线程处于这三种状态之一，那么这个线程就永远没有 CPU 的使用权。</p>
+<h2 id="状态的切换"><a href="#状态的切换" class="headerlink" title="状态的切换"></a>状态的切换</h2><h3 id="RUNABLE-与-BLOCKED"><a href="#RUNABLE-与-BLOCKED" class="headerlink" title="RUNABLE 与 BLOCKED"></a>RUNABLE 与 BLOCKED</h3><ol>
+<li><code>RUNNABLE</code> 与 <code>BLOCKED</code> 的状态转换只有一种场景会触发这种转换，就是线程等待 <code>synchronized</code> 的隐式锁。<code>synchronized</code> 修饰的方法、代码块同一时刻只允许一个线程执行，其他线程只能等待，这种情况下，等待的线程就会从 <code>RUNNABLE</code> 转换到 <code>BLOCKED</code> 状态。而当等待的线程获得 <code>synchronized</code> 隐式锁时，就又会从 <code>BLOCKED</code> 转换到 <code>RUNNABLE</code> 状态。</li>
+</ol>
+<h3 id="RUNNABLE-与-WAITING-的状态转换"><a href="#RUNNABLE-与-WAITING-的状态转换" class="headerlink" title="RUNNABLE 与 WAITING 的状态转换"></a>RUNNABLE 与 WAITING 的状态转换</h3><ol>
+<li>第一种场景，获得 <code>synchronized</code> 隐式锁的线程，调用无参数的 <code>Object.wait()</code> 方法。其中，<code>wait()</code> 方法我们在上一篇讲解管程的时候已经深入介绍过了，这里就不再赘述。</li>
+<li>第二种场景，调用无参数的 <code>Thread.join()</code> 方法。其中的 <code>join()</code> 是一种线程同步方法，例如有一个线程对象 thread A，当调用 <code>A.join()</code> 的时候，执行这条语句的线程会等待 thread A 执行完，而等待中的这个线程，其状态会从 <code>RUNNABLE</code> 转换到 <code>WAITING</code>。当线程 thread A 执行完，原来等待它的线程又会从 <code>WAITING</code>状态转换到 <code>RUNNABLE</code>。</li>
+<li>第三种场景，调用 <code>LockSupport.park()</code> 方法。其中的 <code>LockSupport</code> 对象，也许你有点陌生，其实 Java 并发包中的锁，都是基于它实现的。调用 <code>LockSupport.park()</code> 方法，当前线程会阻塞，线程的状态会从 <code>RUNNABLE</code> 转换到 <code>WAITING</code>。调用 <code>LockSupport.unpark(Thread thread)</code> 可唤醒目标线程，目标线程的状态又会从 <code>WAITING</code> 状态转换到 <code>RUNNABLE</code>。</li>
+</ol>
+<h3 id="RUNNABLE-与-TIMED-WAITING-的状态转换"><a href="#RUNNABLE-与-TIMED-WAITING-的状态转换" class="headerlink" title="RUNNABLE 与 TIMED_WAITING 的状态转换"></a>RUNNABLE 与 TIMED_WAITING 的状态转换</h3><p>有五种场景会触发这种转换：</p>
+<ol>
+<li>调用带超时参数的 Thread.sleep(long millis) 方法；</li>
+<li>获得 synchronized 隐式锁的线程，调用带超时参数的 Object.wait(long timeout) 方法；</li>
+<li>调用带超时参数的 Thread.join(long millis) 方法；</li>
+<li>调用带超时参数的 LockSupport.parkNanos(Object blocker, long deadline) 方法；</li>
+<li>调用带超时参数的 LockSupport.parkUntil(long deadline) 方法。</li>
+</ol>
+<p><strong>TIMED_WAITING 和 WAITING 状态的区别，仅仅是触发条件多了超时参数。</strong></p>
+<h3 id="从-NEW-到-RUNNABLE-状态"><a href="#从-NEW-到-RUNNABLE-状态" class="headerlink" title="从 NEW 到 RUNNABLE 状态"></a>从 NEW 到 RUNNABLE 状态</h3><p>从 NEW 状态转换到 RUNNABLE 状态很简单，只要调用线程对象的 start() 方法就可以了</p>
+<h3 id="从-RUNNABLE-到-TERMINATED-状态"><a href="#从-RUNNABLE-到-TERMINATED-状态" class="headerlink" title="从 RUNNABLE 到 TERMINATED 状态"></a>从 RUNNABLE 到 TERMINATED 状态</h3><p>线程执行完 run() 方法后，会自动转换到 TERMINATED 状态，当然如果执行 run() 方法的时候异常抛出，也会导致线程终止。</p>
+<h1 id="线程的数量"><a href="#线程的数量" class="headerlink" title="线程的数量"></a>线程的数量</h1><p>对于 I/O 密集型计算场景，最佳的线程数是与程序中 CPU 计算和 I/O 操作的耗时比相关的，可以总结出这样一个公式：</p>
+<blockquote>
+<p>最佳线程数 = 1 +（I/O 耗时 / CPU 耗时）</p>
+</blockquote>
+<p>上面这个公式是针对单核 CPU 的，至于多核 CPU，也很简单，只需要等比扩大就可以了，计算公式如下：</p>
+<blockquote>
+<p>最佳线程数 =CPU 核数 * [ 1 +（I/O 耗时 / CPU 耗时）]</p>
+</blockquote>
+<h1 id="Java并发包常用工具"><a href="#Java并发包常用工具" class="headerlink" title="Java并发包常用工具"></a>Java并发包常用工具</h1><h2 id="Lock"><a href="#Lock" class="headerlink" title="Lock"></a>Lock</h2><ol>
+<li>ReentrantLock 可重入锁</li>
+<li>ReadWriteLock 读写锁</li>
+<li>StampedLock 乐观读写锁 不支持重入 不支持条件变量 加锁时中断CPU会飙升</li>
+</ol>
+<h2 id="工具类"><a href="#工具类" class="headerlink" title="工具类"></a>工具类</h2><ol>
+<li>Semaphore 信号量 Method:acquire(),release()</li>
+<li>CountDownLatch</li>
+<li>CyclicBarrier Example:<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-comment">// 订单队列</span><br>Vector&lt;P&gt; pos;<br><span class="hljs-comment">// 派送单队列</span><br>Vector&lt;D&gt; dos;<br><span class="hljs-comment">// 执行回调的线程池 </span><br>Executor executor = <br>  Executors.newFixedThreadPool(<span class="hljs-number">1</span>);<br><span class="hljs-keyword">final</span> CyclicBarrier barrier =<br>  <span class="hljs-keyword">new</span> CyclicBarrier(<span class="hljs-number">2</span>, ()-&gt;&#123;<br>    <span class="hljs-comment">//执行完成的回调</span><br>    executor.execute(()-&gt;check());<br>  &#125;);<br>  <br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">check</span><span class="hljs-params">()</span></span>&#123;<br>  P p = pos.remove(<span class="hljs-number">0</span>);<br>  D d = dos.remove(<span class="hljs-number">0</span>);<br>  <span class="hljs-comment">// 执行对账操作</span><br>  diff = check(p, d);<br>  <span class="hljs-comment">// 差异写入差异库</span><br>  save(diff);<br>&#125;<br>  <br><span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">checkAll</span><span class="hljs-params">()</span></span>&#123;<br>  <span class="hljs-comment">// 循环查询订单库</span><br>  Thread T1 = <span class="hljs-keyword">new</span> Thread(()-&gt;&#123;<br>    <span class="hljs-keyword">while</span>(存在未对账订单)&#123;<br>      <span class="hljs-comment">// 查询订单库</span><br>      pos.add(getPOrders());<br>      <span class="hljs-comment">// 等待</span><br>      barrier.await();<br>    &#125;<br>  &#125;);<br>  T1.start();  <br>  <span class="hljs-comment">// 循环查询运单库</span><br>  Thread T2 = <span class="hljs-keyword">new</span> Thread(()-&gt;&#123;<br>    <span class="hljs-keyword">while</span>(存在未对账订单)&#123;<br>      <span class="hljs-comment">// 查询运单库</span><br>      dos.add(getDOrders());<br>      <span class="hljs-comment">// 等待</span><br>      barrier.await();<br>    &#125;<br>  &#125;);<br>  T2.start();<br>&#125;<br></code></pre></td></tr></table></figure></li>
+<li>无锁原子类 原理：CAS (CompareAndSwap)</li>
+</ol>
+<h2 id="并发容器"><a href="#并发容器" class="headerlink" title="并发容器"></a>并发容器</h2><p>要注意迭代器的加锁</p>
+<h3 id="CopyOnWriteArrayList"><a href="#CopyOnWriteArrayList" class="headerlink" title="CopyOnWriteArrayList"></a>CopyOnWriteArrayList</h3><blockquote>
+<p>无锁，写复制ArrayList 适用于读多写少，且数据弱一致性。迭代器只读</p>
+</blockquote>
+<h3 id="ConcurrentHashMap、ConcurrentSkipListMap"><a href="#ConcurrentHashMap、ConcurrentSkipListMap" class="headerlink" title="ConcurrentHashMap、ConcurrentSkipListMap"></a>ConcurrentHashMap、ConcurrentSkipListMap</h3><p><code>ConcurrentHashMap</code> <code>Key</code>无序、<code>ConcurrentSkipListMap</code> <code>Key</code>有序。<br><code>ConcurrentSkipListMap</code> 里面的 <code>SkipList</code> 本身就是一种数据结构，中文一般都翻译为“跳表”。跳表插入、删除、查询操作平均的时间复杂度是 <code>O(log n)</code>，理论上和并发线程数没有关系，所以在并发度非常高的情况下，若你对 <code>ConcurrentHashMap</code> 的性能还不满意，可以尝试一下 <code>ConcurrentSkipListMap</code>。</p>
+<h3 id="CopyOnWriteArraySet-和-ConcurrentSkipListSet"><a href="#CopyOnWriteArraySet-和-ConcurrentSkipListSet" class="headerlink" title="CopyOnWriteArraySet 和 ConcurrentSkipListSet"></a>CopyOnWriteArraySet 和 ConcurrentSkipListSet</h3><p>与 <code>CopyOnWriteArrayList</code> 和 <code>ConcurrentSkipListMap</code> 原理相同</p>
+<h3 id="Queue-单端阻塞"><a href="#Queue-单端阻塞" class="headerlink" title="Queue 单端阻塞"></a>Queue 单端阻塞</h3><p>其实现有 <code>ArrayBlockingQueue</code>、<code>LinkedBlockingQueue</code>、<code>SynchronousQueue</code>、<code>LinkedTransferQueue</code>、<code>PriorityBlockingQueue</code> 和 <code>DelayQueue</code></p>
+<p>其中 <code>LinkedTransferQueue</code> 融合 <code>LinkedBlockingQueue</code> 和 <code>SynchronousQueue</code> 的功能，性能比 <code>LinkedBlockingQueue</code> 更好；<code>PriorityBlockingQueue</code> 支持按照优先级出队；<code>DelayQueue</code> 支持延时出队</p>
+<h3 id="Deeue-双端阻塞"><a href="#Deeue-双端阻塞" class="headerlink" title="Deeue 双端阻塞"></a>Deeue 双端阻塞</h3><p>其实现是 LinkedBlockingDeque。</p>
+<h3 id="Queue-单端非阻塞"><a href="#Queue-单端非阻塞" class="headerlink" title="Queue 单端非阻塞"></a>Queue 单端非阻塞</h3><p>其实现是 ConcurrentLinkedQueue。</p>
+<h3 id="Deeue-双端非阻塞"><a href="#Deeue-双端非阻塞" class="headerlink" title="Deeue 双端非阻塞"></a>Deeue 双端非阻塞</h3><p>其实现是 ConcurrentLinkedDeque。</p>
+<h1 id="异步-及-线程池"><a href="#异步-及-线程池" class="headerlink" title="异步 及 线程池"></a>异步 及 线程池</h1><h2 id="FutureTask"><a href="#FutureTask" class="headerlink" title="FutureTask"></a>FutureTask</h2><figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-comment">// 创建FutureTask</span><br>FutureTask&lt;Integer&gt; futureTask<br>  = <span class="hljs-keyword">new</span> FutureTask&lt;&gt;(()-&gt; <span class="hljs-number">1</span>+<span class="hljs-number">2</span>);<br><span class="hljs-comment">// 创建并启动线程</span><br>Thread T1 = <span class="hljs-keyword">new</span> Thread(futureTask);<br>T1.start();<br><span class="hljs-comment">// 获取计算结果</span><br>Integer result = futureTask.get();<br></code></pre></td></tr></table></figure>
+
+<h2 id="ThreadPoolExecutor"><a href="#ThreadPoolExecutor" class="headerlink" title="ThreadPoolExecutor"></a>ThreadPoolExecutor</h2><figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">ThreadPoolExecutor</span><span class="hljs-params">(</span></span><br><span class="hljs-function"><span class="hljs-params">  <span class="hljs-keyword">int</span> corePoolSize,</span></span><br><span class="hljs-function"><span class="hljs-params">  <span class="hljs-keyword">int</span> maximumPoolSize,</span></span><br><span class="hljs-function"><span class="hljs-params">  <span class="hljs-keyword">long</span> keepAliveTime,</span></span><br><span class="hljs-function"><span class="hljs-params">  TimeUnit unit,</span></span><br><span class="hljs-function"><span class="hljs-params">  BlockingQueue&lt;Runnable&gt; workQueue,</span></span><br><span class="hljs-function"><span class="hljs-params">  ThreadFactory threadFactory,</span></span><br><span class="hljs-function"><span class="hljs-params">  RejectedExecutionHandler handler)</span></span>&#123;<br>      <span class="hljs-comment">//...</span><br>  &#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="CompletableFeature"><a href="#CompletableFeature" class="headerlink" title="CompletableFeature"></a>CompletableFeature</h2><p><strong>TIPS：默认情况下 CompletableFuture 会使用公共的 ForkJoinPool 线程池，这个线程池默认创建的线程数是 CPU 的核数（也可以通过 JVM option:-Djava.util.concurrent.ForkJoinPool.common.parallelism 来设置 ForkJoinPool 线程池的线程数）</strong><br>CompletableFeature实现了CompletionStage，具体方法可参照JavaDoc</p>
+<p><strong>串行关系</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenApply</span><span class="hljs-params">(fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenApplyAsync</span><span class="hljs-params">(fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenAccept</span><span class="hljs-params">(consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenAcceptAsync</span><span class="hljs-params">(consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenRun</span><span class="hljs-params">(action)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenRunAsync</span><span class="hljs-params">(action)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenCompose</span><span class="hljs-params">(fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenComposeAsync</span><span class="hljs-params">(fn)</span></span>;<br></code></pre></td></tr></table></figure>
+<p><strong>AND汇聚关系</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenCombine</span><span class="hljs-params">(other, fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">thenCombineAsync</span><span class="hljs-params">(other, fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenAcceptBoth</span><span class="hljs-params">(other, consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">thenAcceptBothAsync</span><span class="hljs-params">(other, consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">runAfterBoth</span><span class="hljs-params">(other, action)</span></span>;<br><span class="hljs-function">CompletionStage&lt;Void&gt; <span class="hljs-title">runAfterBothAsync</span><span class="hljs-params">(other, action)</span></span>;<br></code></pre></td></tr></table></figure>
+<p><strong>OR汇聚关系</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-function">CompletionStage <span class="hljs-title">applyToEither</span><span class="hljs-params">(other, fn)</span></span>;<br><span class="hljs-function">CompletionStage <span class="hljs-title">applyToEitherAsync</span><span class="hljs-params">(other, fn)</span></span>;<br><span class="hljs-function">CompletionStage <span class="hljs-title">acceptEither</span><span class="hljs-params">(other, consumer)</span></span>;<br><span class="hljs-function">CompletionStage <span class="hljs-title">acceptEitherAsync</span><span class="hljs-params">(other, consumer)</span></span>;<br><span class="hljs-function">CompletionStage <span class="hljs-title">runAfterEither</span><span class="hljs-params">(other, action)</span></span>;<br><span class="hljs-function">CompletionStage <span class="hljs-title">runAfterEitherAsync</span><span class="hljs-params">(other, action)</span></span>;<br></code></pre></td></tr></table></figure>
+
+<p><strong>Example</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java">CompletableFuture&lt;String&gt; f1 = <br>  CompletableFuture.supplyAsync(()-&gt;&#123;<br>    <span class="hljs-keyword">int</span> t = getRandom(<span class="hljs-number">5</span>, <span class="hljs-number">10</span>);<br>    sleep(t, TimeUnit.SECONDS);<br>    <span class="hljs-keyword">return</span> String.valueOf(t);<br>&#125;);<br><br>CompletableFuture&lt;String&gt; f2 = <br>  CompletableFuture.supplyAsync(()-&gt;&#123;<br>    <span class="hljs-keyword">int</span> t = getRandom(<span class="hljs-number">5</span>, <span class="hljs-number">10</span>);<br>    sleep(t, TimeUnit.SECONDS);<br>    <span class="hljs-keyword">return</span> String.valueOf(t);<br>&#125;);<br><br>CompletableFuture&lt;String&gt; f3 = <br>  f1.applyToEither(f2,s -&gt; s);<br><br>System.out.println(f3.join());<br></code></pre></td></tr></table></figure>
+
+<p><strong>异常处理</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-function">CompletionStage <span class="hljs-title">exceptionally</span><span class="hljs-params">(fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">whenComplete</span><span class="hljs-params">(consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">whenCompleteAsync</span><span class="hljs-params">(consumer)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">handle</span><span class="hljs-params">(fn)</span></span>;<br><span class="hljs-function">CompletionStage&lt;R&gt; <span class="hljs-title">handleAsync</span><span class="hljs-params">(fn)</span></span>;<br></code></pre></td></tr></table></figure>
+
+<p><strong>Example</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java">CompletableFuture&lt;Integer&gt; <br>  f0 = CompletableFuture<br>    .supplyAsync(()-&gt;<span class="hljs-number">7</span>/<span class="hljs-number">0</span>))<br>    .thenApply(r-&gt;r*<span class="hljs-number">10</span>)<br>    .exceptionally(e-&gt;<span class="hljs-number">0</span>);<br>System.out.println(f0.join());<br></code></pre></td></tr></table></figure>
+
+<h2 id="CompletionService"><a href="#CompletionService" class="headerlink" title="CompletionService"></a>CompletionService</h2><p>批量执行异步任务</p>
+<p><strong>Example</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><span class="hljs-comment">// 创建线程池</span><br>ExecutorService executor = <br>  Executors.newFixedThreadPool(<span class="hljs-number">3</span>);<br><span class="hljs-comment">// 创建CompletionService</span><br>CompletionService&lt;Integer&gt; cs = <span class="hljs-keyword">new</span> <br>  ExecutorCompletionService&lt;&gt;(executor);<br><span class="hljs-comment">// 异步向电商S1询价</span><br>cs.submit(()-&gt;getPriceByS1());<br><span class="hljs-comment">// 异步向电商S2询价</span><br>cs.submit(()-&gt;getPriceByS2());<br><span class="hljs-comment">// 异步向电商S3询价</span><br>cs.submit(()-&gt;getPriceByS3());<br><span class="hljs-comment">// 将询价结果异步保存到数据库</span><br><span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i=<span class="hljs-number">0</span>; i&lt;<span class="hljs-number">3</span>; i++) &#123;<br>  <span class="hljs-comment">//take阻塞获取feature  poll非阻塞获取 会返回null</span><br>  Integer r = cs.take().get();<br>  executor.execute(()-&gt;save(r));<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="Fork-Join"><a href="#Fork-Join" class="headerlink" title="Fork/Join"></a>Fork/Join</h2><p>通过ForkJoinPool定义线程池，通过ForkJoinTask来执行任务。主要用来高效的进行并行分治递归。</p>
+<p>ForkJoin的实现类 <code>RecursiveAction</code> 和 <code>RecursiveTask</code></p>
+<p><strong>Fibonacci Example</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><code class="hljs java"><br><span class="hljs-function"><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span></span>&#123;<br>  <span class="hljs-comment">//创建分治任务线程池  </span><br>  ForkJoinPool fjp = <br>    <span class="hljs-keyword">new</span> ForkJoinPool(<span class="hljs-number">4</span>);<br>  <span class="hljs-comment">//创建分治任务</span><br>  Fibonacci fib = <br>    <span class="hljs-keyword">new</span> Fibonacci(<span class="hljs-number">30</span>);   <br>  <span class="hljs-comment">//启动分治任务  </span><br>  Integer result = <br>    fjp.invoke(fib);<br>  <span class="hljs-comment">//输出结果  </span><br>  System.out.println(result);<br>&#125;<br><span class="hljs-comment">//递归任务</span><br><span class="hljs-keyword">static</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Fibonacci</span> <span class="hljs-keyword">extends</span> </span><br><span class="hljs-class">    <span class="hljs-title">RecursiveTask</span>&lt;<span class="hljs-title">Integer</span>&gt;</span>&#123;<br>  <span class="hljs-keyword">final</span> <span class="hljs-keyword">int</span> n;<br>  Fibonacci(<span class="hljs-keyword">int</span> n)&#123;<span class="hljs-keyword">this</span>.n = n;&#125;<br>  <span class="hljs-function"><span class="hljs-keyword">protected</span> Integer <span class="hljs-title">compute</span><span class="hljs-params">()</span></span>&#123;<br>    <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">1</span>)<br>      <span class="hljs-keyword">return</span> n;<br>    Fibonacci f1 = <br>      <span class="hljs-keyword">new</span> Fibonacci(n - <span class="hljs-number">1</span>);<br>    <span class="hljs-comment">//创建子任务  </span><br>    f1.fork();<br>    Fibonacci f2 = <br>      <span class="hljs-keyword">new</span> Fibonacci(n - <span class="hljs-number">2</span>);<br>    <span class="hljs-comment">//等待子任务结果，并合并结果  </span><br>    <span class="hljs-keyword">return</span> f2.compute() + f1.join();<br>  &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+</div></article><div class="post-view__sidebar"><div class="sidebar"><div class="tocbot"><h2>Toc</h2><div class="toc__content"></div></div><h2>Links</h2><div class="sidebar__link"><ul><li><a href="https://github.com/jackjun724" target="_blank" rel="noopener">Github</a></li><li><a href="https://www.zhihu.com/people/wang-jun-jie-20-30" target="_blank" rel="noopener">知乎</a></li><li><a href="/jack@retzero.com">Mail</a></li></ul></div><h2>Archives</h2><div class="sidebar__archives"><ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/">2020</a></li></ul></div><h2>Tags</h2><div class="sidebar__tags"><ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL/" rel="tag">MySQL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Performance/" rel="tag">Performance</a></li></ul></div></div></div></div><div class="horizontal-line" style="height: 1px"></div><div class="main__bottom"><div class="pre-next"><a class="pre-button">没有更多</a><a class="next-button" href="/2020/07/21/mysql-performance/">MySQL性能调优</a></div><div id="comments"></div></div></div></div><div class="footer"><span>©️2019-2020 Designed By&nbsp;<strong><a href="https://github.com/random-yang" target="_blank" rel="noopener">RandomYang</a></strong> Powered By&nbsp;</span><strong><a href="https://hexo.io" target="_blank" rel="noopener">hexo</a></strong></div><div class="darkmode-mask" id="darkmode-mask"></div><div class="sidebar__button"></div></body></html>
