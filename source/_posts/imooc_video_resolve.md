@@ -43,4 +43,4 @@ https://www.imooc.com/video/5848c001b3fee30a6c8b51bd/low.m3u8?cdn=aliyun1...
 ```
 我们用同样的函数去解密，然后就会得到真实的M3U8文件列表。但是文件头写着AES加密，并给出了密钥。
 
-具体解析实现参考我的[Github]，原文分析参考[这里](https://halo.cyblogs.top/archives/decrypt-imooc-video-download.html)
+具体解析实现参考我的[Github](https://github.com/Jackjun724/imooc_crack)，原文分析参考[这里](https://halo.cyblogs.top/archives/decrypt-imooc-video-download.html)
