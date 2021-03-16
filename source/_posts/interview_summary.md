@@ -17,7 +17,7 @@ date: 2021-03-16
 - **超时等待(TIMED_WAITING)**：该状态不同于WAITING，它可以在指定的时间后自行返回。
 - **终止(TERMINATED)**：表示该线程已经执行完毕。
 
-  ![image](https://user-images.githubusercontent.com/38455717/111277146-1369e480-8673-11eb-9520-868f3fabefc3.png)
+![Interview 001](https://user-images.githubusercontent.com/38455717/111280351-ad7f5c00-8676-11eb-8a80-f275ed4108fb.png)
 
 ### AQS
 - [美团技术博客AQS](https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html)
