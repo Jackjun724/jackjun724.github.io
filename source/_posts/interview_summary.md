@@ -4,8 +4,10 @@ tags: 面试宝典
 date: 2021-03-16
 ---
 
+
+
 ## 后端
-常见的一些状态
+只记录一些常见的一些状态，因为比较多容易忘。
 
 ### 线程状态
 - **初始(NEW)**：新创建了一个线程对象，但还没有调用start()方法。
@@ -35,8 +37,25 @@ date: 2021-03-16
 - 一致性（consistency）
 - 隔离性（isolation）
 - 持久性（durability）
- 
-## 前端
+
+### 事务传播
+|事务传播行为类型|说明|
+|--|--|
+|PROPAGATION_REQUIRED|如果当前没有事务，就新建一个事务，如果已经存在一个事务中，加入到这个事务中。这是最常见的选择。|
+|PROPAGATION_SUPPORTS|支持当前事务，如果当前没有事务，就以非事务方式执行。|
+|PROPAGATION_MANDATORY|使用当前的事务，如果当前没有事务，就抛出异常。|
+|PROPAGATION_REQUIRES_NEW|新建事务，如果当前存在事务，把当前事务挂起。|
+|PROPAGATION_NOT_SUPPORTED|以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。|
+|PROPAGATION_NEVER|以非事务方式执行，如果当前存在事务，则抛出异常。|
+|PROPAGATION_NESTED|如果当前存在事务，则在嵌套事务内执行。如果当前没有事务，则执行与PROPAGATION_REQUIRED类似的操作。|
+            
+### Innodb锁
+[Innodb中的事务隔离级别和锁的关系](https://tech.meituan.com/2014/08/20/innodb-lock.html)
+
+### Java IO
+![image](https://user-images.githubusercontent.com/38455717/111279432-a86ddd00-8675-11eb-82ec-295b10e6c5d2.png)
+
+## 前端(待更新)
 
 
-## 运维
+## 运维(待更新)
