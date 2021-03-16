@@ -1,6 +1,7 @@
 ---
 title: 机器学习路子图（持续更新）
-tags: 机器学习|Machine Learning
+tags: [机器学习,Machine Learning]
+date: 2021-03-15
 ---
 
 ## Video Course:
