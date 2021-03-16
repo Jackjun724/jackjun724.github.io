@@ -1,6 +1,7 @@
 ---
 title: MySQL性能调优
 tags: [MySQL,Performance]
+date: 2020-08-20
 ---
 
 # Mysql执行流程
